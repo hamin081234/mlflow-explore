@@ -128,7 +128,7 @@ class InferenceClass:
             return_tensors="pt"
         )["input_ids"]
 
-        outputs, inference_dur = self.generate_model_output(pixel_values, decoder_input_ids)
+        outputs, inference_dur = self.generate_model_output(pixel_values.to(self.device), decoder_input_ids.to(self.device))
         pred_class_list, latex_list, decode_dur = self.decode_tokens(outputs.sequences)
 
         output = {

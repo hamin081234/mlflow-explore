@@ -6,31 +6,15 @@ from transformers import (
 )
 from optimum.onnxruntime import ORTModelForVision2Seq
 
-
-is_onnx = True
-use_cache = True
-
-if is_onnx:
-    # huggingface의 ORT 클래스는 mlflow에서 지원해주지 않음
-    model_path = f"HamAndCheese82/math_ocr_donut_onnx_v1"
-    model = ORTModelForVision2Seq.from_pretrained(
-        model_path,
-        use_cache=use_cache,
-        use_io_binding=use_cache,
-        provider="CPUExecutionProvider",
-    )
-    onnx = "onnx_"
-else:
-    model_path = f"HamAndCheese82/math_ocr_donut_v1"
-    model = VisionEncoderDecoderModel.from_pretrained(model_path)
-    onnx = ""
-
-experiment_name = f"donut_{onnx}trial"
-model_name = f"donut_{onnx}v1"
+experiment_name = f"mlflow_transformers_trial"
 tags = None
-run_name = "mathocr_v1"
+run_name = "mathocr_save"
 params = None
 metrics = None
+
+model_path = f"HamAndCheese82/math_ocr_donut_v1"
+model = VisionEncoderDecoderModel.from_pretrained(model_path)
+onnx = ""
 
 # model_path = "HamAndCheese82/math_ocr_donut_v1"
 task = "image-to-text"
