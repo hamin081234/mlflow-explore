@@ -1,28 +1,20 @@
 import mlflow
 from transformers import DonutProcessor
+from optimum.onnxruntime import ORTModelForVision2Seq
+
 from PIL import Image
 
+from tempfile import TemporaryDirectory
 from inference import InferenceClass
 
-experiment_name = f"donut_decoder_onnx_trial"
-experiment_id = mlflow.set_experiment(experiment_name).experiment_id
+from mlflow_manager import load_transformers_donut
 
-model = mlflow.transformers.load_model(
-    f"runs:/c1f0ab4e1ad84821a9cb8bb28488de5f/mathocr_v5",
-    return_type = 'components'
-)
+model_name = "donut_transformers"
+version = 1
 
-print('#'*100)
-print(model['processor'])
-print('#'*100)
-print(model['image_processor'])
-print('#'*100)
-print(model['tokenizer'])
+model, processor = load_transformers_donut(model_name=model_name, version=version)
 
-processor = DonutProcessor(image_processor=model['image_processor'], tokenizer=model['tokenizer'])
-
-# inf_cl = InferenceClass(model=model['model'], processor=model['processor'], device='cpu')
-inf_cl = InferenceClass(model=model['model'], processor=processor, device='cpu')
+inf_cl = InferenceClass(model=model, processor=processor, device='cpu')
 
 img = Image.open('./bRXmz1.jpg').convert("RGB")
 

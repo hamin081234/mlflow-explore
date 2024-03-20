@@ -1,39 +1,25 @@
-import mlflow
-from transformers import (
-    DonutProcessor,
-    VisionEncoderDecoderModel,
-    T5ForConditionalGeneration,
-)
-from optimum.onnxruntime import ORTModelForVision2Seq
+from transformers import DonutProcessor, VisionEncoderDecoderModel
+from mlflow_manager import save_transformers_donut
 
-experiment_name = f"mlflow_transformers_trial"
+experiment_name = f"donut_mlflow_trial"
 tags = None
-run_name = "mathocr_save"
-params = None
-metrics = None
+run_name = "transformers"
+params = {'key': 'value'}
+metrics = {'acc': 0.8}
+task = "image-to-text"
+model_name="donut_transformers"
 
 model_path = f"HamAndCheese82/math_ocr_donut_v1"
 model = VisionEncoderDecoderModel.from_pretrained(model_path)
-onnx = ""
-
-# model_path = "HamAndCheese82/math_ocr_donut_v1"
-task = "image-to-text"
-
 processor = DonutProcessor.from_pretrained(model_path)
 
-experiment_id = mlflow.set_experiment(experiment_name).experiment_id
-with mlflow.start_run(
-    experiment_id=experiment_id,
+save_transformers_donut(
+    experiment_name=experiment_name,
     run_name=run_name,
-    tags=tags,
-) as run:
-    mlflow.transformers.log_model(
-        transformers_model={
-            "model": model,
-            "tokenizer": processor.tokenizer,
-            "image_processor": processor.image_processor,
-        },
-        processor=processor,
-        artifact_path=run_name,
-        task=task,
-    )
+    metrics=metrics,
+    model=model,
+    model_name=model_name,
+    params=params,
+    processor=processor,
+    task=task,
+)
