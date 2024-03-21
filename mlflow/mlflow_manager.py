@@ -1,4 +1,5 @@
-from ast import Tuple
+from types import NoneType
+from uu import decode
 import mlflow
 from tempfile import TemporaryDirectory
 from optimum.onnxruntime import ORTModelForVision2Seq
@@ -8,6 +9,7 @@ import onnx
 from onnxruntime import InferenceSession
 from mlflow.tracking.artifact_utils import _download_artifact_from_uri
 from mlflow.utils.model_utils import _add_code_from_conf_to_system_path, _get_flavor_configuration
+from mlflow import MlflowClient
 
 
 def save_transformers_donut(
@@ -44,6 +46,7 @@ def save_transformers_donut(
     ) as run:
         mlflow.log_params(params)
         mlflow.log_metrics(metrics)
+        mlflow.set_tag("run_id", run.info.run_id)
         # signature = infer_signature(signature_data, model.predict(signature_data))
         mlflow.transformers.log_model(
             transformers_model={
@@ -57,8 +60,32 @@ def save_transformers_donut(
             registered_model_name=model_name,
         )
 
-
 def load_transformers_donut(model_name, alias=None, model_version=None):
+    """
+    Model registry에 저장된 모델 불러오기
+    Args:
+        model_name (str): 모델 이름
+        alias (str): 모델에 태깅된 @alias
+        model_version (str): 모델 버전
+    Returns:
+        mlflow에 저장된 모델
+    """
+    if alias is not None:
+        model_uri = f"models:/{model_name}@{alias}"
+    elif model_version is not None:
+        model_uri = f"models:/{model_name}/{model_version}"
+    else:
+        raise ValueError("Specify either model_version or alias")
+
+    model = mlflow.transformers.load_model(
+        model_uri=model_uri,
+        return_type = 'components'
+    )
+    processor = DonutProcessor(image_processor=model['image_processor'], tokenizer=model['tokenizer'])
+
+    return model['model'], processor
+
+def load_transformers_onnx_donut(model_name, alias=None, model_version=None):
     """
     Model registry에 저장된 모델 불러오기
     Args:
@@ -83,9 +110,9 @@ def load_transformers_donut(model_name, alias=None, model_version=None):
     temp_dir = TemporaryDirectory()
     model['model'].save_pretrained(temp_dir.name)
 
-    model = ORTModelForVision2Seq.from_pretrained(temp_dir.name, from_transformers=True)
+    ort_model = ORTModelForVision2Seq.from_pretrained(temp_dir.name, from_transformers=True)
     temp_dir.cleanup()
-    return model, processor
+    return ort_model, processor
 
 
 def save_onnx_donut(
@@ -140,6 +167,7 @@ def save_onnx_donut(
                 mlflow.log_artifact(
                     local_path=temp_dir.name + "/" + file, artifact_path="extra"
                 )
+        
     temp_dir.cleanup()
 
 
@@ -152,8 +180,7 @@ def load_model_path(model_uri, dst_path=None):
 
 
 def load_onnx_donut(
-    model_name, 
-    run,
+    model_name,
     alias=None, 
     model_version=None
 ):
@@ -167,12 +194,16 @@ def load_onnx_donut(
         mlflow에 저장된 모델
     """
     model_filenames = ['decoder_model', 'encoder_model', 'decoder_with_past_model']
-
+    
+    client = MlflowClient()
+    decoder_name = model_name+'_'+model_filenames[0]
     model_uri_coll = {}
     if alias is not None:
+        run_id = client.get_model_version_by_alias(decoder_name, alias).run_id
         for filename in model_filenames:
             model_uri_coll[filename] = f"models:/{model_name}_{filename}@{alias}"
     elif model_version is not None:
+        run_id = client.get_model_version(decoder_name, model_version).run_id
         for filename in model_filenames:
             model_uri_coll[filename] = f"models:/{model_name}_{filename}/{model_version}"
     else:
@@ -181,15 +212,14 @@ def load_onnx_donut(
     inf_sessions = {}
     for filename in model_uri_coll.keys():
         inf_sessions[filename] = InferenceSession(
-            # decoder_model.SerializeToString(),
-            # mlflow.artifacts.download_artifacts_from_uri(f"models:/decoder_model/{version}")+"/model.onnx",
             load_model_path(model_uri_coll[filename]),
             providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
         )
 
     config = PretrainedConfig.from_pretrained(
         mlflow.artifacts.download_artifacts(
-            f"runs:/{run}/etc/config.json"
+            # f"runs:/{run}/extra/config.json"
+            f"runs:/{run_id}/extra/config.json"
         )
     )
     config.decoder = PretrainedConfig.from_dict(config.decoder)
@@ -205,7 +235,7 @@ def load_onnx_donut(
         model_save_dir=temp_model_save_dir
     )
 
-    model_path = mlflow.artifacts.download_artifacts(f"runs:/{run}/extra/")
+    model_path = mlflow.artifacts.download_artifacts(f"runs:/{run_id}/extra/")
     processor = DonutProcessor.from_pretrained(model_path)
     
     return model, processor
@@ -247,6 +277,7 @@ def save_achitecture_donut(
     ) as run:
         mlflow.log_params(params)
         mlflow.log_metrics(metrics)
+        mlflow.set_tag("run_id", run.info.run_id)
         # signature = infer_signature(signature_data, model.predict(signature_data))
         mlflow.log_artifacts(temp_dir.name, artifact_path="model")
 
