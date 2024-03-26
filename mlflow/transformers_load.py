@@ -8,7 +8,7 @@ from mlflow_manager import load_transformers_donut
 import numpy as np
 
 model_name = "donut_transformers"
-model_version = 1
+model_version = 5
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 

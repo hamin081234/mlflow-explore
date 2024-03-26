@@ -46,7 +46,6 @@ def save_transformers_donut(
     ) as run:
         mlflow.log_params(params)
         mlflow.log_metrics(metrics)
-        mlflow.set_tag("run_id", run.info.run_id)
         # signature = infer_signature(signature_data, model.predict(signature_data))
         mlflow.transformers.log_model(
             transformers_model={
@@ -81,9 +80,9 @@ def load_transformers_donut(model_name, alias=None, model_version=None):
         model_uri=model_uri,
         return_type = 'components'
     )
-    processor = DonutProcessor(image_processor=model['image_processor'], tokenizer=model['tokenizer'])
+    # processor = DonutProcessor(image_processor=model['image_processor'], tokenizer=model['tokenizer'])
 
-    return model['model'], processor
+    return model['model'], model['processor']
 
 def load_transformers_onnx_donut(model_name, alias=None, model_version=None):
     """

@@ -2,7 +2,7 @@ from transformers import DonutProcessor, VisionEncoderDecoderModel
 from mlflow_manager import save_transformers_donut
 
 experiment_name = f"donut_mlflow_trial"
-tags = None
+tags = {'test': 'yes'}
 run_name = "transformers"
 params = {'key': 'value'}
 metrics = {'acc': 0.8}
@@ -22,4 +22,5 @@ save_transformers_donut(
     params=params,
     processor=processor,
     task=task,
+    tags=tags
 )

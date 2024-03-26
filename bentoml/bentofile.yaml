@@ -1,0 +1,14 @@
+service: 'service:svc'
+include:
+  - '*.py'
+python:
+  packages:
+    - torch
+    - transformers
+    - numpy
+    - Pillow
+# docker:
+#    cuda_version: 12.1.1
+models:
+  - donut_processor:latest
+  - donut_model:latest
