@@ -1,12 +1,17 @@
 import bentoml
 
-from bentoml.io import Text, Image
+from bentoml.io import Text, Image, JSON
+# from PIL.Image import Image as PILImage
+from PIL import Image as PILImage
 import re
+from time import time
 
 processor_ref = bentoml.transformers.get("donut_processor:latest")
 model_ref = bentoml.transformers.get("donut_model:latest")
 
 class DonutRunnable(bentoml.Runnable):
+    SUPPORTED_RESOURCES = ('nvidia.com/gp', 'cpu')
+    SUPPORTS_CPU_MULTI_THREADING = True
 
     def __init__(self):
         self.processor = bentoml.transformers.load_model(processor_ref)
@@ -15,7 +20,8 @@ class DonutRunnable(bentoml.Runnable):
         # self.speaker_embeddings = torch.tensor(self.embeddings_dataset[7306]["xvector"]).unsqueeze(0)
 
     @bentoml.Runnable.method(batchable=False)
-    def generate_text(self, inp: Image):
+    def generate_latex(self, inp: Image):
+        inp = inp.convert("RGB")
         pixel_values = self.processor(inp, return_tensors='pt').pixel_values
 
         decoder_input_ids = self.processor.tokenizer(
@@ -23,7 +29,8 @@ class DonutRunnable(bentoml.Runnable):
             add_special_tokens=False,
             return_tensors="pt"
         )["input_ids"]
-
+        
+        start_time = time()
         outputs = self.model.generate(
             pixel_values,
             decoder_input_ids=decoder_input_ids,
@@ -36,6 +43,7 @@ class DonutRunnable(bentoml.Runnable):
             return_dict_in_generate=True,
             output_scores=True,
         )
+        dur = time()-start_time
 
         decoded_sequences = self.processor.batch_decode(outputs.sequences, skip_special_tokens=True)
 
@@ -50,11 +58,16 @@ class DonutRunnable(bentoml.Runnable):
             latex = re.sub(r"{}".format(spc_rm), " ", output).strip()
             latex_list.append(latex)
 
-        return latex_list[0]
+        return {'latex': latex_list[0], 'duration': dur}
 
 donut_runner = bentoml.Runner(DonutRunnable, name="donut_runner", models=[processor_ref, model_ref])
 svc = bentoml.Service("image2latex", runners=[donut_runner])
 
-@svc.api(input=Image(), output=Text())
-async def generate_text(inp: Image):
-    return await donut_runner.generate_speech.async_run(inp)
+@svc.api(input=Text(), output=JSON())
+async def generate_latex(input_img: str):
+    print("ENTERED!!!!!!!!!!: ", input_img)
+    # image = PILImage.open(input_img).convert("RGB")
+    image = PILImage.open(input_img)
+    # assert isinstance(input_img, PILImage)
+    return await donut_runner.generate_latex.async_run(image)
+

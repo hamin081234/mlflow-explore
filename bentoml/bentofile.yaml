@@ -1,14 +1,16 @@
 service: 'service:svc'
+labels:
+  owner: hama
+  project: mathocr-donut
 include:
-  - '*.py'
+- '*.py'
 python:
   packages:
     - torch
     - transformers
     - numpy
     - Pillow
-# docker:
-#    cuda_version: 12.1.1
-models:
-  - donut_processor:latest
-  - donut_model:latest
+docker:
+  distro: debian
+  python_version: "3.11.8"
+  cuda_version: "12.1"
