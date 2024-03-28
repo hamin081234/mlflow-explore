@@ -1,10 +1,9 @@
 import bentoml
-
-from bentoml.io import Text, Image, JSON
-# from PIL.Image import Image as PILImage
+from bentoml.io import Image, JSON, File
 from PIL import Image as PILImage
 import re
 from time import time
+import io
 
 processor_ref = bentoml.transformers.get("donut_processor:latest")
 model_ref = bentoml.transformers.get("donut_model:latest")
@@ -63,11 +62,9 @@ class DonutRunnable(bentoml.Runnable):
 donut_runner = bentoml.Runner(DonutRunnable, name="donut_runner", models=[processor_ref, model_ref])
 svc = bentoml.Service("image2latex", runners=[donut_runner])
 
-@svc.api(input=Text(), output=JSON())
-async def generate_latex(input_img: str):
-    print("ENTERED!!!!!!!!!!: ", input_img)
-    # image = PILImage.open(input_img).convert("RGB")
-    image = PILImage.open(input_img)
-    # assert isinstance(input_img, PILImage)
-    return await donut_runner.generate_latex.async_run(image)
+@svc.api(input=File(), output=JSON())
+async def generate_latex(f):
+    input_bytes = io.BytesIO(io.BytesIO(f.read()).read())
+    img = PILImage.open(input_bytes)
 
+    return await donut_runner.generate_latex.async_run(img)
