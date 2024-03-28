@@ -10,7 +10,7 @@ python:
     - transformers
     - numpy
     - Pillow
+    - nltk
 docker:
-  distro: debian
   python_version: "3.11.8"
   cuda_version: "12.1"
