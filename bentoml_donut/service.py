@@ -34,20 +34,6 @@ donut_runner = bentoml.Runner(
 svc = bentoml.Service("image2latex", runners=[donut_runner])
 
 
-@svc.api(input=File(), output=JSON())
-async def generate_latex(f):
-    input_bytes = io.BytesIO(io.BytesIO(f.read()).read())
-    img = PILImage.open(input_bytes)
-    print(img)
-    return await donut_runner.generate_latex.async_run(img)
-
-
-@svc.api(input=Text(), output=Text())
-async def return_text(text: str):
-    return text
-
-
-# @svc.api(input=Image(), output=JSON())
-# async def generate_latex(image):
-#     print(image)
-#     return await donut_runner.generate_latex.async_run(image)
+@svc.api(input=Image(), output=JSON())
+async def generate_latex(image):
+    return await donut_runner.generate_latex.async_run(image)

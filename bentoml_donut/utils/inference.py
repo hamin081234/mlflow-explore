@@ -43,6 +43,7 @@ class InferenceClass:
         :return pixel_values (torch.Tensor): 모델의 input size에 맞게 변환된 이미지
         :return dur (float): 변환시키는 동안 걸린 시간
         """
+        images = images.convert("RGB")
         dur = time.time()
         pixel_values = self.processor(images, return_tensors='pt').pixel_values
         dur = time.time() - dur
