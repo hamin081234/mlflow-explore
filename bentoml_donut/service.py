@@ -1,17 +1,16 @@
 import bentoml
-from bentoml.io import Image, JSON, File
+from bentoml.io import Image, JSON, File, Text
 from PIL import Image as PILImage
-import re
-from time import time
 import io
 import torch
-from inference import InferenceClass
+from utils.inference import InferenceClass
 
 processor_ref = bentoml.transformers.get("donut_processor:latest")
 model_ref = bentoml.transformers.get("donut_model:latest")
 
+
 class DonutRunnable(bentoml.Runnable):
-    SUPPORTED_RESOURCES = ('nvidia.com/gpu', 'cpu')
+    SUPPORTED_RESOURCES = ("nvidia.com/gpu", "cpu")
     SUPPORTS_CPU_MULTI_THREADING = True
 
     def __init__(self):
@@ -19,26 +18,36 @@ class DonutRunnable(bentoml.Runnable):
         self.model = bentoml.transformers.load_model(model_ref)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        self.model.to(self.device)
-
         self.inferece_class = InferenceClass(self.model, self.processor, self.device)
 
     @bentoml.Runnable.method(batchable=False)
     def generate_latex(self, inp: Image):
-        print(self.device)
-
         inp = inp.convert("RGB")
         result = self.inferece_class.inference(inp)
 
         return result
 
-donut_runner = bentoml.Runner(DonutRunnable, name="donut_runner", models=[processor_ref, model_ref])
 
+donut_runner = bentoml.Runner(
+    DonutRunnable, name="donut_runner", models=[processor_ref, model_ref]
+)
 svc = bentoml.Service("image2latex", runners=[donut_runner])
+
 
 @svc.api(input=File(), output=JSON())
 async def generate_latex(f):
     input_bytes = io.BytesIO(io.BytesIO(f.read()).read())
     img = PILImage.open(input_bytes)
-
+    print(img)
     return await donut_runner.generate_latex.async_run(img)
+
+
+@svc.api(input=Text(), output=Text())
+async def return_text(text: str):
+    return text
+
+
+# @svc.api(input=Image(), output=JSON())
+# async def generate_latex(image):
+#     print(image)
+#     return await donut_runner.generate_latex.async_run(image)
