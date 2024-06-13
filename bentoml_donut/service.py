@@ -36,4 +36,5 @@ svc = bentoml.Service("image2latex", runners=[donut_runner])
 
 @svc.api(input=Image(), output=JSON())
 async def generate_latex(image):
+    print("successfully accessed!: ", image)
     return await donut_runner.generate_latex.async_run(image)
